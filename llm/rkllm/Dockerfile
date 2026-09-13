@@ -27,4 +27,14 @@ RUN pip3 install --no-cache-dir fastapi==0.115.* uvicorn[standard]==0.30.* \
 
 COPY server.py /app/server.py
 EXPOSE 8080
+
+# Drop to a non-root user before the server starts. Port 8080 is
+# unprivileged; /app is the only path the process must own. The
+# `video` group matches typical /dev/rknpu ownership on RK3588.
+RUN groupadd --gid 10001 rkllm \
+    && useradd --uid 10001 --gid 10001 --groups video \
+        --home-dir /app --shell /usr/sbin/nologin rkllm \
+    && chown rkllm:rkllm /app
+USER rkllm
+
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8080"]
